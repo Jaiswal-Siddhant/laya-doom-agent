@@ -68,4 +68,30 @@ def test_agent_loop_observes_decides_validates_and_steps() -> None:
 
     assert result.steps == 1
     assert result.total_reward == 1.0
+    assert result.termination_reason == "finished"
     assert environment.calls == ["reset", "is_finished", "observe", "step:shoot", "is_finished"]
+
+
+def test_agent_stops_before_deciding_when_out_of_ammo() -> None:
+    environment = FakeEnvironment()
+    environment.observe = lambda: Observation(
+        health=100,
+        armor=0,
+        ammo=0,
+        weapon="pistol",
+        enemy_visible=False,
+        episode_time=1.0,
+        episode_finished=False,
+    )
+    agent = DoomAgent(
+        environment=environment,
+        decision_engine=FakeDecisionEngine(),
+        action_validator=ActionValidator(),
+        telemetry=NullTelemetryRecorder(),
+    )
+
+    result = agent.run_episode()
+
+    assert result.steps == 0
+    assert result.termination_reason == "out_of_ammo"
+    assert environment.calls == ["reset", "is_finished"]

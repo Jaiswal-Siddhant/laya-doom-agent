@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
@@ -16,5 +16,11 @@ class AgentDecision(BaseModel):
 
 
 class DecisionEngine(Protocol):
-    def decide(self, observation: Observation) -> AgentDecision:
-        ...
+    def decide(self, observation: Observation) -> AgentDecision: ...
+
+
+@runtime_checkable
+class ActionFeedback(Protocol):
+    """Optional feedback hook for stateful decision engines."""
+
+    def record_action(self, action: DoomAction) -> None: ...

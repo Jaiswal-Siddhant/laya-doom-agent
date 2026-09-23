@@ -50,20 +50,54 @@ On first Laya use, model weights may be downloaded by the Laya/Hugging Face stac
 
 ## ViZDoom Setup
 
-The default scenario is `scenarios/v1_basic.cfg`, which references ViZDoom's bundled `basic.wad`. It exposes only four buttons:
+The default scenario is `scenarios/continuous_combat.cfg`, which references ViZDoom's bundled
+`defend_the_center.wad`. It continuously spawns enemies until the episode ends and exposes three
+combat buttons:
 
-- `MOVE_FORWARD`
 - `TURN_LEFT`
 - `TURN_RIGHT`
 - `ATTACK`
 
-Those map to the V1 domain actions: `move_forward`, `turn_left`, `turn_right`, `shoot`, and `noop`.
+Those map to the normal-mode actions: `turn_left`, `turn_right`, `shoot`, and `noop`. The previous
+single-enemy basic map remains available through `--scenario scenarios/v1_basic.cfg`.
 
 ## Running V1
 
 ```bash
 uv run python -m laya_doom
 ```
+
+### Native game monitor
+
+Install the optional desktop UI once, then run the agent with a single native window. It renders
+the live Doom frame on the left, decision/model statistics on the right, and a recent-decision
+log along the bottom.
+
+```bash
+uv sync --extra ui
+uv run laya-doom --model aac6fef/laya-mlx --ui
+```
+
+## Running a full level
+
+ViZDoom bundles the open-source FreeDoom campaign. Start its first level with:
+
+```bash
+uv run python -m laya_doom --freedoom
+```
+
+This mode enables movement, strafing, turning, firing, and `use` actions, with controls
+mapped from the selected scenario rather than relying on the V1 four-button layout. To
+run an owned DOOM or DOOM II IWAD, provide a matching ViZDoom config through `--scenario`.
+
+## Navigation
+
+When no enemy is visible, the agent uses a local navigation map rather than repeatedly
+asking the action model to explore. It marks cells reached by successful movement as
+traversable, marks a forward direction blocked after three failed movement attempts, and
+uses A* to route to the nearest unexplored frontier. Combat decisions remain with Laya.
+When forward movement repeatedly fails at a corner, it first follows the wall with a committed
+turn-and-advance maneuver, then replans from its new position.
 
 Useful options:
 

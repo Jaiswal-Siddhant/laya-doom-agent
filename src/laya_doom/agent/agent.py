@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import logging
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from laya_doom.actions.validator import ActionValidator
-from laya_doom.decision.base import DecisionEngine
+from laya_doom.decision.base import ActionFeedback, DecisionEngine
 from laya_doom.environment.base import DoomEnvironment
 from laya_doom.telemetry.events import TelemetryRecorder
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 class EpisodeResult(BaseModel):
     steps: int = Field(ge=0)
     total_reward: float
+    termination_reason: Literal["finished", "max_steps", "out_of_ammo"]
 
 
 class DoomAgent:
@@ -36,16 +38,24 @@ class DoomAgent:
         self._environment.reset()
         steps = 0
         total_reward = 0.0
+        termination_reason: Literal["finished", "max_steps", "out_of_ammo"] = "finished"
 
         while not self._environment.is_finished():
             if self._max_steps is not None and steps >= self._max_steps:
+                termination_reason = "max_steps"
                 break
 
             observation = self._environment.observe()
             logger.debug("observation_created")
+            if observation.ammo <= 0:
+                termination_reason = "out_of_ammo"
+                logger.info("episode_ended reason=%s", termination_reason)
+                break
             decision = self._decision_engine.decide(observation)
             action = self._action_validator.validate(decision)
             result = self._environment.step(action)
+            if isinstance(self._decision_engine, ActionFeedback):
+                self._decision_engine.record_action(action)
             logger.debug(
                 "action_executed action=%s reward=%.3f finished=%s",
                 action.value,
@@ -62,4 +72,8 @@ class DoomAgent:
             steps += 1
             total_reward += result.reward
 
-        return EpisodeResult(steps=steps, total_reward=total_reward)
+        return EpisodeResult(
+            steps=steps,
+            total_reward=total_reward,
+            termination_reason=termination_reason,
+        )

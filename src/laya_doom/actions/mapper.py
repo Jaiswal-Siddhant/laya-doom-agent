@@ -4,15 +4,26 @@ from laya_doom.actions.models import DoomAction
 
 
 class ViZDoomActionMapper:
-    """Maps V1 domain actions to ViZDoom's binary button vector."""
+    """Maps domain actions to the button order supplied by a ViZDoom scenario."""
 
-    def __init__(self) -> None:
-        self._mapping: dict[DoomAction, list[int]] = {
-            DoomAction.MOVE_FORWARD: [1, 0, 0, 0],
-            DoomAction.TURN_LEFT: [0, 1, 0, 0],
-            DoomAction.TURN_RIGHT: [0, 0, 1, 0],
-            DoomAction.SHOOT: [0, 0, 0, 1],
-            DoomAction.NOOP: [0, 0, 0, 0],
+    _default_button_order = ("MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "ATTACK")
+    _action_buttons: dict[DoomAction, tuple[str, ...]] = {
+        DoomAction.MOVE_FORWARD: ("MOVE_FORWARD",),
+        DoomAction.MOVE_BACKWARD: ("MOVE_BACKWARD",),
+        DoomAction.STRAFE_LEFT: ("STRAFE", "MOVE_LEFT"),
+        DoomAction.STRAFE_RIGHT: ("STRAFE", "MOVE_RIGHT"),
+        DoomAction.TURN_LEFT: ("TURN_LEFT",),
+        DoomAction.TURN_RIGHT: ("TURN_RIGHT",),
+        DoomAction.SHOOT: ("ATTACK",),
+        DoomAction.USE: ("USE",),
+        DoomAction.NOOP: (),
+    }
+
+    def __init__(self, button_order: tuple[str, ...] | None = None) -> None:
+        self._button_order = button_order or self._default_button_order
+        self._mapping = {
+            action: [int(button in self._action_buttons[action]) for button in self._button_order]
+            for action in DoomAction
         }
 
     def to_vizdoom(self, action: DoomAction) -> list[int]:
@@ -20,4 +31,12 @@ class ViZDoomActionMapper:
 
     @property
     def button_order(self) -> tuple[str, ...]:
-        return ("MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "ATTACK")
+        return self._button_order
+
+    @property
+    def available_actions(self) -> tuple[DoomAction, ...]:
+        return tuple(
+            action
+            for action, buttons in self._action_buttons.items()
+            if not buttons or all(button in self._button_order for button in buttons)
+        )
