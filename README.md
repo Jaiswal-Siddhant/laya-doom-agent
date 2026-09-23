@@ -2,7 +2,7 @@
 
 Laya DOOM is a local autonomous DOOM agent built with ViZDoom and Laya-MLX. It turns structured game state into a typed observation, selects one safe action at a time, executes it, and records lightweight telemetry. In **Freedom Mode**, it can explore the bundled FreeDoom E1M1 level with local map-building and A\* path finding.
 
-<video src="static/v1_recording.mp4" autoplay muted loop playsinline controls aria-label="Laya DOOM Freedom Mode recording"></video>
+<video src="static/v1_recording.mp4" controls playsinline aria-label="Laya DOOM Freedom Mode recording"></video>
 
 [Watch the V1 recording](static/v1_recording.mp4)
 
