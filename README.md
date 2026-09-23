@@ -1,10 +1,10 @@
 # Laya DOOM
 
-Laya DOOM is a local autonomous DOOM agent built with ViZDoom and Laya-MLX. It turns structured game state into a typed observation, selects one safe action at a time, executes it, and records lightweight telemetry. In **Freedom Mode**, it can explore the bundled FreeDoom E1M1 level with local map-building and A* path finding.
+Laya DOOM is a local autonomous DOOM agent built with ViZDoom and Laya-MLX. It turns structured game state into a typed observation, selects one safe action at a time, executes it, and records lightweight telemetry. In **Freedom Mode**, it can explore the bundled FreeDoom E1M1 level with local map-building and A\* path finding.
 
-<video src="static/v1_recording.mov" controls muted loop playsinline aria-label="Laya DOOM Freedom Mode recording"></video>
+<video src="static/v1_recording.mp4" autoplay muted loop playsinline controls aria-label="Laya DOOM Freedom Mode recording"></video>
 
-[Watch the V1 recording](static/v1_recording.mov)
+[Watch the V1 recording](static/v1_recording.mp4)
 
 The agent deliberately uses structured ViZDoom state rather than screenshots or computer vision. It runs Laya-MLX locally on Apple Silicon—no cloud LLMs, RAG, or reinforcement-learning training is involved.
 
@@ -98,11 +98,11 @@ uv run laya-doom --freedom
 
 It enables movement, strafing, turning, firing, and `use`, and maps only the controls exposed by the selected ViZDoom scenario. `--freedoom` remains accepted as an alias. To run an owned DOOM or DOOM II IWAD, provide a matching ViZDoom config with `--scenario`.
 
-## Navigation and A* path finding
+## Navigation and A\* path finding
 
 When no enemy is visible, the agent explores with a local navigator instead of spending model calls on aimless movement. It discretizes the player's position into a sparse 32-unit grid, learns which cells are traversable, and identifies **frontiers**: known reachable cells next to unknown space.
 
-For each frontier, A* searches the known traversable graph using Manhattan distance as its heuristic. The navigator selects the shortest resulting path, steers toward its next waypoint, and asks Laya to resume combat decisions as soon as there is an enemy to engage.
+For each frontier, A\* searches the known traversable graph using Manhattan distance as its heuristic. The navigator selects the shortest resulting path, steers toward its next waypoint, and asks Laya to resume combat decisions as soon as there is an enemy to engage.
 
 ```text
 known cells -> reachable frontier -> A* shortest path -> next waypoint -> turn or advance
