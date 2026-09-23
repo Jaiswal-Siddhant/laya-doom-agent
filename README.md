@@ -1,8 +1,18 @@
 # Laya DOOM
 
-Laya DOOM is a V1 autonomous DOOM combat agent. It runs ViZDoom, converts structured game state into a typed domain observation, asks Laya-MLX for one immediate action, validates that action, executes it, and records lightweight telemetry.
+Laya DOOM is a local autonomous DOOM agent built with ViZDoom and Laya-MLX. It turns structured game state into a typed observation, selects one safe action at a time, executes it, and records lightweight telemetry. In **Freedom Mode**, it can explore the bundled FreeDoom E1M1 level with local map-building and A* path finding.
 
-V1 deliberately uses structured ViZDoom state only. It does not send screenshots to Laya, use computer vision, train reinforcement learning policies, call cloud LLMs, use RAG, or attempt a full DOOM campaign.
+<video src="static/v1_recording.mov" controls muted loop playsinline aria-label="Laya DOOM Freedom Mode recording"></video>
+
+[Watch the V1 recording](static/v1_recording.mov)
+
+The agent deliberately uses structured ViZDoom state rather than screenshots or computer vision. It runs Laya-MLX locally on Apple Silicon—no cloud LLMs, RAG, or reinforcement-learning training is involved.
+
+## Why this exists
+
+Laya DOOM is a controlled testbed for Laya's decision model. ViZDoom provides a fast, repeatable environment in which the model receives a compact, typed game-state snapshot and must choose its next action from a constrained set. This makes it practical to inspect whether Laya can make sensible short-horizon combat decisions—such as turning toward a detected enemy, firing when aligned, or moving safely—while measuring the choice, confidence when available, latency, reward, and episode outcome.
+
+The project intentionally separates deterministic responsibilities from model judgment: observation building, action validation, environment control, telemetry, and exploration routing are conventional code; Laya decides the immediate combat action. That boundary makes failures easier to reproduce and diagnose than in an end-to-end vision or full-game agent.
 
 ## Architecture
 
@@ -61,7 +71,7 @@ combat buttons:
 Those map to the normal-mode actions: `turn_left`, `turn_right`, `shoot`, and `noop`. The previous
 single-enemy basic map remains available through `--scenario scenarios/v1_basic.cfg`.
 
-## Running V1
+## Run the combat scenario
 
 ```bash
 uv run python -m laya_doom
@@ -78,32 +88,34 @@ uv sync --extra ui
 uv run laya-doom --model aac6fef/laya-mlx --ui
 ```
 
-## Running a full level
+## Freedom Mode: explore a full level
 
-ViZDoom bundles the open-source FreeDoom campaign. Start its first level with:
+Freedom Mode runs the bundled open-source FreeDoom campaign's first level (E1M1):
 
 ```bash
-uv run python -m laya_doom --freedoom
+uv run laya-doom --freedom
 ```
 
-This mode enables movement, strafing, turning, firing, and `use` actions, with controls
-mapped from the selected scenario rather than relying on the V1 four-button layout. To
-run an owned DOOM or DOOM II IWAD, provide a matching ViZDoom config through `--scenario`.
+It enables movement, strafing, turning, firing, and `use`, and maps only the controls exposed by the selected ViZDoom scenario. `--freedoom` remains accepted as an alias. To run an owned DOOM or DOOM II IWAD, provide a matching ViZDoom config with `--scenario`.
 
-## Navigation
+## Navigation and A* path finding
 
-When no enemy is visible, the agent uses a local navigation map rather than repeatedly
-asking the action model to explore. It marks cells reached by successful movement as
-traversable, marks a forward direction blocked after three failed movement attempts, and
-uses A* to route to the nearest unexplored frontier. Combat decisions remain with Laya.
-When forward movement repeatedly fails at a corner, it first follows the wall with a committed
-turn-and-advance maneuver, then replans from its new position.
+When no enemy is visible, the agent explores with a local navigator instead of spending model calls on aimless movement. It discretizes the player's position into a sparse 32-unit grid, learns which cells are traversable, and identifies **frontiers**: known reachable cells next to unknown space.
+
+For each frontier, A* searches the known traversable graph using Manhattan distance as its heuristic. The navigator selects the shortest resulting path, steers toward its next waypoint, and asks Laya to resume combat decisions as soon as there is an enemy to engage.
+
+```text
+known cells -> reachable frontier -> A* shortest path -> next waypoint -> turn or advance
+```
+
+If three forward moves fail to produce meaningful position change, the cell ahead is marked blocked. The agent then performs a short alternating wall-follow recovery (turn, then advance) and replans around the newly discovered obstacle. This keeps exploration responsive without pretending the map is known in advance.
 
 Useful options:
 
 ```bash
 uv run python -m laya_doom --help
 uv run python -m laya_doom --episodes 3 --debug
+uv run python -m laya_doom --freedom --ui
 uv run python -m laya_doom --model aac6fef/laya-multilingual-mlx --dtype float16
 uv run python -m laya_doom --no-telemetry
 ```
@@ -156,9 +168,10 @@ uv run ruff format --check .
 uv run mypy src tests
 ```
 
-## Current Limitations
+## Current limitations
 
 - V1 uses structured state only; no screenshots or visual observations.
 - Enemy visibility comes from ViZDoom labels when available.
 - Enemy distance and direction are reported only when position variables and label positions are available.
-- The scenario is intentionally tiny and meant to test `observe -> decide -> act`, not level completion.
+- The V1 combat scenario is intentionally tiny and meant to test `observe -> decide -> act`.
+- Navigation is a local, discovered map—not global level knowledge—and is only available in scenarios that expose movement and position data.

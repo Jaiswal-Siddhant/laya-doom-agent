@@ -29,7 +29,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to a ViZDoom .cfg scenario file.",
     )
     parser.add_argument(
+        "--freedom",
         "--freedoom",
+        dest="freedom",
         action="store_true",
         help="Run the bundled FreeDoom E1M1 level instead of the basic combat map.",
     )
@@ -71,7 +73,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     settings = AppSettings(
-        scenario=PROJECT_ROOT / "scenarios" / "freedoom1.cfg" if args.freedoom else args.scenario,
+        scenario=PROJECT_ROOT / "scenarios" / "freedoom1.cfg" if args.freedom else args.scenario,
         model=args.model,
         dtype=args.dtype,
         episodes=args.episodes,
